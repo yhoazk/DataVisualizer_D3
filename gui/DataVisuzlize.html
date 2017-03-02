@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+
+        <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: black;
+            color: cyan;
+        }
+
+        .graph .axis {
+            stroke-width: 1;
+            fill: gray;
+            background-color: cyan;
+        }
+
+        .grid .axis{
+          stroke-width:4px;
+        }
+        .graph .axis .tick line {
+            stroke: cyan;
+        }
+
+        .graph .axis .tick text {
+            fill: black;
+            font-size: 0.7em;
+        }
+
+        .graph .axis .domain {
+            fill: none;
+            stroke: cyan;
+        }
+
+
+        .segment_display{
+          color: cyan;
+          fill: red;
+
+        }
+
+        .area {
+            fill: lightsteelblue;
+            stroke-width: 0;
+        }
+        .graph .group {
+            fill: none;
+            stroke: black;
+            stroke-width: 1.5;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="graph"></div>
+
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <script>
+        var limit = 60 * 1,
+            duration = 1000,
+            now = new Date(Date.now() - 1 /*duration*/)
+
+        var width = 1000 ,
+            height = 500
+        var area = d3.svg.area()
+            .x(function(d) { return x(d.date); })
+            .y0(height)
+            .y1(function(d) { return y(d.close); });
+
+        var groups = {
+            current: {
+                value: 0,
+                color: 'yellow',
+                data: d3.range(limit).map(function() {
+                    return 0
+                })
+            },
+            target: {
+                value: 0,
+                color: 'blue',
+                data: d3.range(limit).map(function() {
+                    return 0
+                })
+            },
+
+            test: {
+                value: 20,
+                color: 'red',
+                data: d3.range(limit).map(function() {
+                    return 0
+                })
+            }
+        }
+
+        var x = d3.time.scale()
+            .domain([now - (limit - 2), now - duration])
+            .range([0, width])
+
+        var y = d3.scale.linear()
+            .domain([0, 100])
+            .range([height, 0])
+
+        var line = d3.svg.line()
+            .interpolate('basis') // basis, linear, step-after
+            .x(function(d, i) {
+                return x(now - (limit - 1 - i) * duration)
+            })
+            .y(function(d) {
+                return y(d)
+            })
+
+        var svg = d3.select('.graph').append('svg')
+            .attr('class', 'chart')
+            .attr('width', width)
+            .attr('height', height + 90)
+
+        var axis = svg.append('g')
+            .attr('class', 'x axis')
+            .attr('transform', 'translate(0,' + height + ')')
+            .call(x.axis = d3.svg.axis().scale(x).orient('bottom'))
+
+        var paths = svg.append('g')
+
+        // Draw the x Grid lines
+        svg.append("g")
+            .attr("class", "grid")
+            .attr("transform", "translate(0," + height + ")")
+            .call(make_x_axis()
+                .tickSize(-height, 0, 0)
+                .tickFormat("")
+            )
+
+
+                // Add the filled area
+
+
+        for (var name in groups) {
+            var group = groups[name]
+            group.path = paths.append('path')
+                .data([group.data])
+                .attr('class', name + ' group')
+                .style('stroke', group.color)
+        }
+
+        function make_x_axis() {
+            return d3.svg.axis()
+                .scale(x)
+                 .orient("bottom")
+                 .ticks(5)
+        }
+
+        function make_y_axis() {
+            return d3.svg.axis()
+                .scale(y)
+                .orient("left")
+                .ticks(5)
+        }
+
+        svg.append("g")
+        .attr("class", "grid")
+        .attr("transform", "translate(0," + height + ")")
+        .call(make_x_axis()
+            .tickSize(-height, 0, 0)
+            .tickFormat("")
+        )
+
+    svg.append("g")
+        .attr("class", "grid")
+        .call(make_y_axis()
+            .tickSize(-width, 0, 0)
+            .tickFormat("")
+        )
+/*
+        // add the X gridlines
+svg.append("g")
+    .attr("class", "grid")
+    .attr("transform", "translate(0," + height + ")")
+    .call(make_x_gridlines()
+        .tickSize(-height)
+        .tickFormat("")
+    )
+
+// add the Y gridlines
+svg.append("g")
+    .attr("class", "grid")
+    .call(make_y_gridlines()
+        .tickSize(-width)
+        .tickFormat("")
+    )
+
+    */
+        function tick() {
+        now = new Date()
+
+            // Add new values
+            for (var name in groups) {
+                var group = groups[name]
+                //group.data.push(group.value) // Real values arrive at irregular intervals
+                group.data.push(20 + Math.random() * 100)
+                group.path.attr('d', line)
+            }
+
+            // Shift domain
+            x.domain([now - (limit - 2) * duration, now - duration])
+
+            // Slide x-axis left
+            axis.transition()
+                .duration(duration)
+                .ease('linear')
+                .call(x.axis)
+
+            // Slide paths left
+            paths.attr('transform', null)
+                .transition()
+                .duration(duration)
+                .ease('linear')
+                .attr('transform', 'translate(' + x(now - (limit - 1) * duration) + ')')
+                .each('end', tick)
+
+            // Remove oldest data point from each group
+            for (var name in groups) {
+                var group = groups[name]
+                group.data.shift()
+            }
+        }
+
+        tick()
+        </script>
+    </body>
+</html>
